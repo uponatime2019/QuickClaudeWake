@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
+using Windows.Graphics.Imaging;
+using Windows.Storage.Streams;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using QuickClaudeWake.Helpers;
 using QuickClaudeWake.Models;
 using QuickClaudeWake.Services;
@@ -18,7 +22,6 @@ namespace QuickClaudeWake
         private readonly HashSet<string> _scheduledSessionIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private ObservableCollection<ClaudeSessionInfo> _sessions = new ObservableCollection<ClaudeSessionInfo>();
         private ObservableCollection<ClaudeSessionInfo> _recentSessions = new ObservableCollection<ClaudeSessionInfo>();
-        private ObservableCollection<AgySessionInfo> _agySessions = new ObservableCollection<AgySessionInfo>();
 
         private DispatcherTimer? _ticker;
         private bool _isSchedulerRunning = false;
@@ -36,6 +39,7 @@ namespace QuickClaudeWake
             _settings = QuickClaudeWakeSettings.Load();
             WindowHelper.Configure(this, "Quick Claude Wake", _settings.WindowWidth, _settings.WindowHeight);
             Closed += MainWindow_Closed;
+            RootGrid.Loaded += MainWindow_Loaded;
 
             LoadSettingsIntoUI();
 
@@ -132,7 +136,6 @@ namespace QuickClaudeWake
                 _ = FetchLiveGlmQuotaAsync();
                 ScanSessions();
                 ScanRecentSessions();
-                ScanAgySessions();
 
                 if (_settings.AutoStartScheduler)
                 {
@@ -398,26 +401,77 @@ namespace QuickClaudeWake
             }
         }
 
-        private async void ScanAgySessions()
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            await Task.Delay(800);
+            await EnsureAppScreenshotAsync();
+        }
+
+        public async Task EnsureAppScreenshotAsync(bool force = false)
         {
             try
             {
-                var list = await Task.Run(() => AgySessionHelper.GetRecentSessions(max: 7, daysLookback: 5));
-                _agySessions.Clear();
-                foreach (var item in list)
+                string[] candidateDirs = new[]
                 {
-                    _agySessions.Add(item);
-                }
+                    Path.Combine(AppContext.BaseDirectory, "Assets"),
+                    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Assets"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets")
+                };
 
-                lvAgySessions.ItemsSource = _agySessions;
-                txtAgySubStatus.Text = _agySessions.Count > 0
-                    ? $"Found {_agySessions.Count} recent Google Antigravity session(s) (latest 5 days, max 7)."
-                    : "No recent Google Antigravity sessions found in the past 5 days.";
+                foreach (var dir in candidateDirs)
+                {
+                    try
+                    {
+                        var fullDir = Path.GetFullPath(dir);
+                        if (Directory.Exists(fullDir))
+                        {
+                            string targetFile = Path.Combine(fullDir, "screenshot.png");
+                            if (force || !File.Exists(targetFile))
+                            {
+                                await CaptureScreenshotToFileAsync(targetFile);
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
-                txtAgySubStatus.Text = "Scan error: " + ex.Message;
-                AppLogger.LogException(ex, "ScanAgySessions");
+                AppLogger.LogException(ex, "EnsureAppScreenshotAsync");
+            }
+        }
+
+        public async Task CaptureScreenshotToFileAsync(string outputPath)
+        {
+            try
+            {
+                if (this.Content is UIElement rootElement)
+                {
+                    var rtb = new RenderTargetBitmap();
+                    await rtb.RenderAsync(rootElement);
+                    var pixelBuffer = await rtb.GetPixelsAsync();
+                    byte[] pixels = pixelBuffer.ToArray();
+
+                    using var memStream = new InMemoryRandomAccessStream();
+                    var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, memStream);
+                    encoder.SetPixelData(
+                        BitmapPixelFormat.Bgra8,
+                        BitmapAlphaMode.Premultiplied,
+                        (uint)rtb.PixelWidth,
+                        (uint)rtb.PixelHeight,
+                        96, 96,
+                        pixels);
+                    await encoder.FlushAsync();
+
+                    memStream.Seek(0);
+                    using var fileStream = File.Create(outputPath);
+                    await memStream.AsStreamForRead().CopyToAsync(fileStream);
+                    AppLogger.LogAction($"[SCREENSHOT] Saved app screenshot to: {outputPath} ({rtb.PixelWidth}x{rtb.PixelHeight})");
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.LogException(ex, "CaptureScreenshotToFileAsync");
             }
         }
 
@@ -436,28 +490,13 @@ namespace QuickClaudeWake
             {
                 ScanRecentSessions();
             }
-            else if (mainPivot.SelectedIndex == 2)
-            {
-                ScanAgySessions();
-            }
         }
 
         private void RefreshRecent_Click(object sender, RoutedEventArgs e) => ScanRecentSessions();
-        private void RefreshAgy_Click(object sender, RoutedEventArgs e) => ScanAgySessions();
         private void Refresh_Click(object sender, RoutedEventArgs e)
         {
             ScanSessions();
             if (_isSchedulerRunning) UpdateBottomScheduleStatus();
-        }
-
-        private async void OpenAgyTerminal_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is AgySessionInfo session)
-            {
-                AppLogger.LogAction($"[USER_ACTION] Open AGY Terminal clicked: {session.ShortId}");
-                AgySessionHelper.LaunchAgyTerminal(session.WorkspacePath, session.ConversationId);
-                await TelegramHelper.SendAlertAsync($"💻 <b>AGY Session Opened in Terminal</b>\n📌 {session.TitlePreview}\n🆔 {session.ShortId}", _settings);
-            }
         }
 
         private void ContinueNow_Click(object sender, RoutedEventArgs e)

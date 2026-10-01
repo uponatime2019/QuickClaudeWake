@@ -11,7 +11,7 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid Padding="12">
+    <Grid x:Name="RootGrid" Padding="12">
         <Pivot x:Name="mainPivot" SelectionChanged="Pivot_SelectionChanged">
             <!-- Pivot 1: Auto-Wake Scheduler -->
             <PivotItem Header="⏰ Auto-Wake Scheduler">
@@ -399,112 +399,7 @@
                 </Grid>
             </PivotItem>
 
-            <!-- Pivot 3: AGY Recent Sessions -->
-            <PivotItem Header="🤖 AGY Sessions">
-                <Grid Padding="8,12,8,0" RowSpacing="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <!-- Top Action Bar -->
-                    <Border
-                        Grid.Row="0"
-                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="16,14">
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
-                                <TextBlock
-                                    x:Name="txtAgyStatus"
-                                    FontSize="14"
-                                    FontWeight="SemiBold"
-                                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                    Text="Google Antigravity (agy.exe) Sessions" />
-                                <TextBlock
-                                    x:Name="txtAgySubStatus"
-                                    FontSize="12"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Shows recent Google Antigravity CLI conversations from ~/.gemini/antigravity-cli/brain/" />
-                            </StackPanel>
-
-                            <Button
-                                Grid.Column="1"
-                                Click="RefreshAgy_Click"
-                                Padding="12,8"
-                                FontSize="14"
-                                Content="🔄 Refresh"
-                                ToolTipService.ToolTip="Refresh AGY sessions list" />
-                        </Grid>
-                    </Border>
-
-                    <!-- AGY Sessions List -->
-                    <ListView
-                        x:Name="lvAgySessions"
-                        Grid.Row="1"
-                        ScrollViewer.VerticalScrollBarVisibility="Auto"
-                        SelectionMode="None">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Padding" Value="0,4" />
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Border
-                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="16,12">
-                                    <Grid ColumnSpacing="16">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Title & Interval -->
-                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4" ToolTipService.ToolTip="{Binding DetailToolTip}">
-                                            <TextBlock
-                                                FontSize="15"
-                                                FontWeight="SemiBold"
-                                                Text="{Binding TitlePreview}"
-                                                TextTrimming="CharacterEllipsis"
-                                                ToolTipService.ToolTip="{Binding DetailToolTip}" />
-                                            <TextBlock
-                                                FontSize="12.5"
-                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                                                Text="{Binding RelativeTime}" />
-                                        </StackPanel>
-
-                                        <!-- Resume AGY Button -->
-                                        <Button
-                                            Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Padding="14,10"
-                                            FontSize="14"
-                                            FontWeight="SemiBold"
-                                            Content="💻 Open AGY Terminal"
-                                            Tag="{Binding}"
-                                            Click="OpenAgyTerminal_Click"
-                                            ToolTipService.ToolTip="Resume AGY session in terminal with agy.exe" />
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </Grid>
-            </PivotItem>
-
-            <!-- Pivot 4: Settings -->
+            <!-- Pivot 3: Settings -->
             <PivotItem Header="⚙️ Settings">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,12,8,12">
                     <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left">

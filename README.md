@@ -1,7 +1,7 @@
 # Quick Claude Wake
 
 <p align="center">
-  <strong>A lightning-fast, lightweight auto-wake scheduler and session manager for Claude Code CLI and Google Antigravity on Windows 10 &amp; 11 built with WinUI 3 and .NET 8.</strong>
+  <strong>A lightning-fast, lightweight auto-wake scheduler and session manager for Claude Code CLI on Windows 10 &amp; 11 built with WinUI 3 and .NET 8.</strong>
 </p>
 
 <p align="center">
@@ -41,7 +41,6 @@ Get the standalone portable release with zero installation required:
 - **⚡ Instant Manual Continue**: Continue individual sessions or all ready sessions at once with one click.
 - **💻 Direct Terminal Integration**: Launch Claude Code sessions interactively in Windows Terminal (`wt.exe`) or Cmd (`cmd.exe`) directly to the session's workspace.
 - **📜 Recent Sessions Browser**: Inspect recent Claude Code conversations across projects with full prompt previews, timestamps, and one-click resumption.
-- **🤖 Google Antigravity (AGY) Integration**: Detects and resumes Google Antigravity CLI conversations from `~/.gemini/antigravity-cli/brain/` with `agy --conversation <id> --dangerously-skip-permissions`.
 - **📊 Optional Live Quota Monitor**: Optional GLM / Z.ai quota monitoring (cleanly configured via settings/UI, zero hardcoded credentials).
 - **🔔 Windows Notifications & Optional Telegram Alerts**: Native Windows Toast notifications on wake events, plus optional Telegram bot alerts for mobile tracking.
 - **🎨 Windows 11 Fluent Design**: Native Mica backdrop, smooth animations, and automatic System / Light / Dark theme support.
@@ -55,7 +54,7 @@ Get the standalone portable release with zero installation required:
 | :--- | :--- | :--- |
 | **Framework** | .NET 8.0 (`net8.0-windows10.0.19041.0`) | High-performance C# runtime with modern language features |
 | **UI Layer** | WinUI 3 (Windows App SDK 2.4) | Native Windows Fluent Design UI with Mica material |
-| **Agent CLI** | Anthropic Claude Code &amp; Google Antigravity | Seamless CLI bridge for automatic resuming and interactive terminals |
+| **Agent CLI** | Anthropic Claude Code CLI (`claude.exe`) | Seamless CLI bridge for automatic resuming and interactive terminals |
 | **Configuration** | System.Text.Json | Clean local settings in `%LOCALAPPDATA%\QuickClaudeWake\settings.json` |
 | **Deployment** | Self-Contained Unpackaged (`WindowsPackageType=None`) | Portable standalone executable, no MSIX certificate or Store dependencies |
 
@@ -94,7 +93,6 @@ dotnet publish "QuickClaudeWake.csproj" -c Release -p:Platform=x64 -o "publish/Q
 - [x] Unpackaged standalone portable execution
 - [x] Auto-detection for Claude Code session rate limits
 - [x] Continuous loop scheduler until all tasks end
-- [x] Google Antigravity (AGY) sessions browser & launcher
 - [x] Native Windows toast notifications on session wake
 - [x] Configurable GLM quota and Telegram alert credentials
 - [ ] System tray minimization with background auto-wake
