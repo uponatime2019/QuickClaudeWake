@@ -93,6 +93,7 @@ namespace QuickClaudeWake
 
                 _window = new MainWindow();
                 _window.Activate();
+                WindowHelper.BringToForeground(_window);
                 AppLogger.LogAction("MainWindow_Activated");
             }
             catch (Exception ex)
@@ -114,9 +115,7 @@ namespace QuickClaudeWake
                         PostMessage(hwnd, msg, IntPtr.Zero, IntPtr.Zero);
                     }
 
-                    ShowWindow(hwnd, SW_RESTORE);
-                    ShowWindow(hwnd, SW_SHOW);
-                    SetForegroundWindow(hwnd);
+                    WindowHelper.BringToForeground(hwnd);
                 }
             }
             catch (Exception ex)
