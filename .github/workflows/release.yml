@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish standalone unpackaged app
+        run: dotnet publish "QuickClaudeWake.csproj" -c Release -p:Platform=x64 -o "publish/QuickClaudeWake_Portable"
+
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'publish/QuickClaudeWake_Portable/resources.pri')) {
+            throw 'App PRI missing from publish output'
+          }
+          Compress-Archive -Path "publish/QuickClaudeWake_Portable/*" -DestinationPath "QuickClaudeWake-${{ github.ref_name }}-win-x64.zip"
+
+      - name: Create GitHub Release & Upload Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: QuickClaudeWake-*-win-x64.zip
+          generate_release_notes: true
+          overwrite: true

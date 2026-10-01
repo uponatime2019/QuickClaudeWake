@@ -1,0 +1,14 @@
+## Visual Studio & .NET Ignore
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.userosscache
+.vs/
+*.lock.json
+*.nuget.props
+*.nuget.targets
+*.zip
+*.log
+app_session_*.txt

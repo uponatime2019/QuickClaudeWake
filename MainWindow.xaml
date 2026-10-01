@@ -1,0 +1,582 @@
+<Window
+    x:Class="QuickClaudeWake.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Quick Claude Wake"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="12">
+        <Pivot x:Name="mainPivot" SelectionChanged="Pivot_SelectionChanged">
+            <!-- Pivot 1: Auto-Wake Scheduler -->
+            <PivotItem Header="⏰ Auto-Wake Scheduler">
+                <Grid Padding="8,12,8,0" RowSpacing="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Action Bar -->
+                    <Border
+                        Grid.Row="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,14">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Schedule All Button -->
+                                <Button
+                                    x:Name="btnScheduleAll"
+                                    Grid.Column="0"
+                                    Click="ToggleScheduler_Click"
+                                    Padding="16,10"
+                                    FontSize="14"
+                                    FontWeight="Bold"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                    Content="⏰ Schedule Wake All Sessions" />
+
+                                <!-- Continue All Button -->
+                                <Button
+                                    x:Name="btnContinueAllReady"
+                                    Grid.Column="1"
+                                    Click="ContinueAllReady_Click"
+                                    Padding="14,10"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Content="⚡ Continue All"
+                                    ToolTipService.ToolTip="Immediately continue all sessions that appear in the list now" />
+
+                                <!-- Dedicated Global Countdown Clock -->
+                                <Border
+                                    x:Name="pnlGlobalCountdown"
+                                    Grid.Column="2"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    CornerRadius="6"
+                                    Padding="14,4"
+                                    VerticalAlignment="Center">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="0">
+                                        <TextBlock
+                                            x:Name="txtGlobalCountdown"
+                                            FontSize="20"
+                                            FontWeight="Bold"
+                                            HorizontalAlignment="Center"
+                                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                            Text="--:--:--" />
+                                        <TextBlock
+                                            x:Name="txtGlobalCountdownSub"
+                                            FontSize="10.5"
+                                            HorizontalAlignment="Center"
+                                            Foreground="{ThemeResource TextOnAccentFillColorSecondaryBrush}"
+                                            Text="Global Cooldown" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Scheduler Live Status -->
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock
+                                        x:Name="txtStatus"
+                                        FontSize="14"
+                                        FontWeight="SemiBold"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Text="Ready to schedule" />
+                                    <TextBlock
+                                        x:Name="txtSubStatus"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="Auto-wakes all sessions at their reset time using --effort max --permission-mode auto" />
+                                </StackPanel>
+
+                                <!-- Interval Lookback ComboBox -->
+                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock Text="Interval:" VerticalAlignment="Center" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    <ComboBox
+                                        x:Name="cmbLookbackInterval"
+                                        SelectedIndex="1"
+                                        SelectionChanged="CmbLookbackInterval_SelectionChanged"
+                                        MinWidth="105"
+                                        ToolTipService.ToolTip="Scan sessions modified within this interval">
+                                        <ComboBoxItem Content="6h" Tag="0.25" />
+                                        <ComboBoxItem Content="24h" Tag="1.0" />
+                                        <ComboBoxItem Content="2 days" Tag="2.0" />
+                                        <ComboBoxItem Content="3 days" Tag="3.0" />
+                                        <ComboBoxItem Content="7 days" Tag="7.0" />
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <!-- Refresh Button -->
+                                <Button
+                                    Grid.Column="5"
+                                    Click="Refresh_Click"
+                                    Padding="12,8"
+                                    FontSize="14"
+                                    Content="🔄 Refresh"
+                                    ToolTipService.ToolTip="Rescan Claude Code sessions" />
+                            </Grid>
+
+                            <!-- CheckBox: Continue loop until done -->
+                            <CheckBox
+                                x:Name="chkContinueLoop"
+                                Content="Continue loop until done (will continue wait and wakeup for next free limit)"
+                                IsChecked="True"
+                                FontSize="12.5"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                ToolTipService.ToolTip="When enabled, the scheduler will continuously watch and auto-wake sessions on each rate limit expiration until done" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Sessions List -->
+                    <ListView
+                        x:Name="lvSessions"
+                        Grid.Row="1"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectionMode="None">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0,4" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="16,12">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                             <ColumnDefinition Width="*" />
+                                             <ColumnDefinition Width="Auto" />
+                                             <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Title & Interval -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4" ToolTipService.ToolTip="{Binding DetailToolTip}">
+                                            <TextBlock
+                                                FontSize="15"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTipService.ToolTip="{Binding DetailToolTip}" />
+                                            <TextBlock
+                                                FontSize="12.5"
+                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{Binding RelativeTime}" />
+                                        </StackPanel>
+
+                                        <!-- Session Status -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Spacing="2">
+                                            <TextBlock
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                HorizontalAlignment="Right"
+                                                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                                Text="{Binding StatusText}" />
+                                        </StackPanel>
+
+                                        <!-- Action Buttons -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <Button
+                                                VerticalAlignment="Center"
+                                                Padding="12,8"
+                                                FontSize="13"
+                                                FontWeight="Bold"
+                                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                                Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                                Content="▶️ Continue Now"
+                                                Tag="{Binding}"
+                                                Click="ContinueNow_Click"
+                                                ToolTipService.ToolTip="Immediately continue this session silently with prompt 'continue'" />
+
+                                            <Button
+                                                VerticalAlignment="Center"
+                                                Padding="12,8"
+                                                FontSize="13"
+                                                FontWeight="SemiBold"
+                                                Content="💻 Open in Terminal"
+                                                Tag="{Binding}"
+                                                Click="OpenTerminal_Click" />
+
+                                            <Button
+                                                VerticalAlignment="Center"
+                                                Padding="10,8"
+                                                FontSize="13"
+                                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                Content="🗑️ Remove"
+                                                Tag="{Binding}"
+                                                Click="RemoveSession_Click"
+                                                ToolTipService.ToolTip="Remove this session from the auto-wake schedule" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <!-- Bottom Scheduled Status Bar -->
+                    <Border
+                        x:Name="pnlScheduledStatus"
+                        Grid.Row="2"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10"
+                        Margin="0,0,0,6"
+                        Visibility="Collapsed">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <FontIcon Glyph="&#xE823;" FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBlock
+                                    x:Name="txtBottomScheduleHeader"
+                                    FontWeight="Bold"
+                                    FontSize="13"
+                                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                    Text="Active Schedule:" />
+                            </StackPanel>
+
+                            <ScrollViewer
+                                Grid.Column="1"
+                                HorizontalScrollBarVisibility="Auto"
+                                HorizontalScrollMode="Enabled"
+                                VerticalScrollBarVisibility="Disabled"
+                                VerticalScrollMode="Disabled">
+                                <TextBlock
+                                    x:Name="txtBottomScheduleTitles"
+                                    VerticalAlignment="Center"
+                                    FontSize="12.5"
+                                    TextTrimming="CharacterEllipsis"
+                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+
+                    <!-- Bottom Footer Controls -->
+                    <Grid Grid.Row="3" Margin="0,2,0,0">
+                        <HyperlinkButton
+                            x:Name="btnForceReload"
+                            Click="ForceReload_Click"
+                            HorizontalAlignment="Right"
+                            Padding="6,2"
+                            FontSize="12"
+                            ToolTipService.ToolTip="Clear the list of manually removed/skipped sessions and scan all sessions fresh">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE72C;" FontSize="11" />
+                                <TextBlock Text="Force Reload (Reset Skipped List)" />
+                            </StackPanel>
+                        </HyperlinkButton>
+                    </Grid>
+                </Grid>
+            </PivotItem>
+
+            <!-- Pivot 2: Recent Sessions -->
+            <PivotItem Header="📜 Recent Sessions">
+                <Grid Padding="8,12,8,0" RowSpacing="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Action Bar -->
+                    <Border
+                        Grid.Row="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,14">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock
+                                    x:Name="txtRecentStatus"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                    Text="Recent Claude Code Conversations" />
+                                <TextBlock
+                                    x:Name="txtRecentSubStatus"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Shows the most recent Claude sessions across projects" />
+                            </StackPanel>
+
+                            <Button
+                                Grid.Column="1"
+                                Click="RefreshRecent_Click"
+                                Padding="12,8"
+                                FontSize="14"
+                                Content="🔄 Refresh"
+                                ToolTipService.ToolTip="Refresh recent sessions list" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Recent Sessions List -->
+                    <ListView
+                        x:Name="lvRecentSessions"
+                        Grid.Row="1"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectionMode="None">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0,4" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="16,12">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Title & Interval -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4" ToolTipService.ToolTip="{Binding DetailToolTip}">
+                                            <TextBlock
+                                                FontSize="15"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding Title}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTipService.ToolTip="{Binding DetailToolTip}" />
+                                            <TextBlock
+                                                FontSize="12.5"
+                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{Binding RelativeTime}" />
+                                        </StackPanel>
+
+                                        <!-- Open Terminal Button -->
+                                        <Button
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Padding="14,10"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Content="💻 Open in Terminal"
+                                            Tag="{Binding}"
+                                            Click="OpenTerminal_Click"
+                                            ToolTipService.ToolTip="Open session terminal directly" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
+            <!-- Pivot 3: AGY Recent Sessions -->
+            <PivotItem Header="🤖 AGY Sessions">
+                <Grid Padding="8,12,8,0" RowSpacing="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Action Bar -->
+                    <Border
+                        Grid.Row="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16,14">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="2">
+                                <TextBlock
+                                    x:Name="txtAgyStatus"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                    Text="Google Antigravity (agy.exe) Sessions" />
+                                <TextBlock
+                                    x:Name="txtAgySubStatus"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Shows recent Google Antigravity CLI conversations from ~/.gemini/antigravity-cli/brain/" />
+                            </StackPanel>
+
+                            <Button
+                                Grid.Column="1"
+                                Click="RefreshAgy_Click"
+                                Padding="12,8"
+                                FontSize="14"
+                                Content="🔄 Refresh"
+                                ToolTipService.ToolTip="Refresh AGY sessions list" />
+                        </Grid>
+                    </Border>
+
+                    <!-- AGY Sessions List -->
+                    <ListView
+                        x:Name="lvAgySessions"
+                        Grid.Row="1"
+                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                        SelectionMode="None">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="0,4" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Border
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="16,12">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Title & Interval -->
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="4" ToolTipService.ToolTip="{Binding DetailToolTip}">
+                                            <TextBlock
+                                                FontSize="15"
+                                                FontWeight="SemiBold"
+                                                Text="{Binding TitlePreview}"
+                                                TextTrimming="CharacterEllipsis"
+                                                ToolTipService.ToolTip="{Binding DetailToolTip}" />
+                                            <TextBlock
+                                                FontSize="12.5"
+                                                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                Text="{Binding RelativeTime}" />
+                                        </StackPanel>
+
+                                        <!-- Resume AGY Button -->
+                                        <Button
+                                            Grid.Column="1"
+                                            VerticalAlignment="Center"
+                                            Padding="14,10"
+                                            FontSize="14"
+                                            FontWeight="SemiBold"
+                                            Content="💻 Open AGY Terminal"
+                                            Tag="{Binding}"
+                                            Click="OpenAgyTerminal_Click"
+                                            ToolTipService.ToolTip="Resume AGY session in terminal with agy.exe" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+
+            <!-- Pivot 4: Settings -->
+            <PivotItem Header="⚙️ Settings">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="8,12,8,12">
+                    <StackPanel Spacing="16" MaxWidth="720" HorizontalAlignment="Left">
+                        <Border
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="20,16">
+                            <StackPanel Spacing="14">
+                                <TextBlock Text="Preferences &amp; Integrations" FontSize="16" FontWeight="Bold" />
+
+                                <!-- Auto-Start -->
+                                <CheckBox
+                                    x:Name="chkRunAtStartup"
+                                    Content="Start Quick Claude Wake automatically when Windows starts"
+                                    FontSize="13.5" />
+
+                                <!-- Continue Loop Default -->
+                                <CheckBox
+                                    x:Name="chkLoopDefault"
+                                    Content="Enable continuous loop mode by default"
+                                    IsChecked="True"
+                                    FontSize="13.5" />
+
+                                <!-- Custom Working Directory Fallback -->
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Custom Working Directory Fallback:" FontSize="13" FontWeight="SemiBold" />
+                                    <TextBox x:Name="txtCustomWorkingDir" PlaceholderText="e.g. C:\Users\Username\Projects" />
+                                    <TextBlock Text="Fallback directory when resuming a Claude Code session" FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+
+                                <!-- GLM Token -->
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="GLM / Z.ai Bearer Token (Optional):" FontSize="13" FontWeight="SemiBold" />
+                                    <PasswordBox x:Name="txtGlmBearerToken" PlaceholderText="Paste token to track 5-hour quota and countdown" />
+                                    <TextBlock Text="Enables real-time 5h quota monitoring and countdown synchronization" FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+
+                                <!-- Telegram Bot Alerts -->
+                                <TextBlock Text="Telegram Notifications (Optional)" FontSize="14" FontWeight="Bold" Margin="0,8,0,0" />
+                                
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Text="Telegram Bot Token:" FontSize="13" FontWeight="SemiBold" />
+                                        <PasswordBox x:Name="txtTelegramBotToken" PlaceholderText="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Text="Telegram Chat / Channel ID:" FontSize="13" FontWeight="SemiBold" />
+                                        <TextBox x:Name="txtTelegramChatId" PlaceholderText="e.g. -100123456789 or @channel" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Save Button -->
+                                <Button
+                                    Click="SaveSettings_Click"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                    FontWeight="Bold"
+                                    Padding="20,10"
+                                    Margin="0,10,0,0"
+                                    Content="💾 Save Settings" />
+                                <TextBlock x:Name="txtSaveStatus" FontSize="12.5" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </PivotItem>
+        </Pivot>
+    </Grid>
+</Window>
