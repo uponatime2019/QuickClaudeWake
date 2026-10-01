@@ -12,3 +12,7 @@ publish/
 *.zip
 *.log
 app_session_*.txt
+settings.json
+Publish-To-GitHub.ps1
+scratch/
+*.local
