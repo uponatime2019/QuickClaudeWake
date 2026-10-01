@@ -92,9 +92,11 @@ namespace QuickClaudeWake
                 SyncStartupSetting();
 
                 _window = new MainWindow();
+                IntPtr hwnd = WinRT.Interop.WindowNative.GetWindowHandle(_window);
+                AppLogger.LogAction($"MainWindow created, HWND={hwnd}");
                 _window.Activate();
                 WindowHelper.BringToForeground(_window);
-                AppLogger.LogAction("MainWindow_Activated");
+                AppLogger.LogAction($"MainWindow_Activated, HWND={hwnd}");
             }
             catch (Exception ex)
             {

@@ -64,6 +64,7 @@ namespace QuickClaudeWake.Helpers
             IntPtr hwnd = WindowNative.GetWindowHandle(window);
             WindowId windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
             AppWindow appWindow = AppWindow.GetFromWindowId(windowId);
+            AppLogger.LogAction($"[CONFIGURE] hwnd={hwnd}, appWindow={(appWindow != null ? "ok" : "null")}");
 
             if (appWindow != null)
             {
@@ -115,6 +116,7 @@ namespace QuickClaudeWake.Helpers
         public static void BringToForeground(IntPtr hwnd)
         {
             if (hwnd == IntPtr.Zero) return;
+            AppLogger.LogAction($"[BRING_TO_FOREGROUND] hwnd={hwnd}, IsIconic={IsIconic(hwnd)}");
 
             const uint SWP_NOSIZE = 0x0001;
             const uint SWP_NOMOVE = 0x0002;
